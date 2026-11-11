@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --neon-blue: #00F0FF;
+    --neon-purple: #B026FF;
+    --neon-pink: #FF007A;
+    --neon-green: #00FF66;
+    --dark-bg: #060812;
+    --dark-surface: #0c1024;
+    --dark-card: #121833;
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: #060812;
+    color: #f1f5f9;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: 'Chakra Petch', sans-serif;
+  }
+
+  .font-orbitron {
+    font-family: 'Orbitron', sans-serif;
+  }
+
+  .font-teko {
+    font-family: 'Teko', sans-serif;
+  }
+}
+
+/* Custom Gaming Aesthetics */
+.neon-glow-blue {
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.45), inset 0 0 10px rgba(0, 240, 255, 0.2);
+}
+
+.neon-glow-purple {
+  box-shadow: 0 0 25px rgba(176, 38, 255, 0.5), inset 0 0 12px rgba(176, 38, 255, 0.25);
+}
+
+.neon-border-blue {
+  border-color: #00F0FF;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
+}
+
+.neon-text-blue {
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.8), 0 0 20px rgba(0, 240, 255, 0.4);
+}
+
+.neon-text-purple {
+  text-shadow: 0 0 10px rgba(176, 38, 255, 0.8), 0 0 20px rgba(176, 38, 255, 0.4);
+}
+
+.cyber-grid {
+  background-image: 
+    linear-gradient(to right, rgba(0, 240, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(176, 38, 255, 0.05) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.cyber-dots {
+  background-image: radial-gradient(rgba(0, 240, 255, 0.15) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #090d1f;
+}
+::-webkit-scrollbar-thumb {
+  background: #252e56;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #00F0FF;
+}

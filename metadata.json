@@ -1,0 +1,6 @@
+{
+  "name": "GOALSTAR GAMING STUDIO",
+  "description": "Professional YouTube gaming creator studio for thumbnails, titles, descriptions, match posters, shorts templates, and channel branding.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
