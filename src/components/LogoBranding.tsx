@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { LogoState } from '../types';
-import { renderLogoCanvas, triggerFileDownload } from '../utils/canvasRenderer';
+import { renderLogoCanvas, triggerFileDownload, exportHighResLogo } from '../utils/canvasRenderer';
 import { PRESET_LOGOS } from '../utils/assets';
 import confetti from 'canvas-confetti';
 import { 
@@ -31,6 +31,7 @@ export const LogoBranding: React.FC<LogoBrandingProps> = ({
   const [isRendering, setIsRendering] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const [state, setState] = useState<LogoState>({
     brandName: channelName || 'GOALSTAR GAMING',
@@ -61,23 +62,32 @@ export const LogoBranding: React.FC<LogoBrandingProps> = ({
     };
   }, [state]);
 
-  const handleDownload = () => {
-    if (!canvasRef.current) return;
-    const dataUrl = canvasRef.current.toDataURL('image/png');
-    const safeName = state.brandName.replace(/[^a-zA-Z0-9]/g, '_');
-    triggerFileDownload(dataUrl, `GOALSTAR_${safeName}_LOGO_800x800.png`);
-
+  const handleDownload = async (resolution: '800p' | '4k' = '4k') => {
+    setIsExporting(true);
     try {
-      confetti({
-        particleCount: 50,
-        spread: 60,
-        origin: { y: 0.7 },
-        colors: ['#00F0FF', '#B026FF'],
-      });
-    } catch {}
+      const result = await exportHighResLogo(state, resolution);
+      triggerFileDownload(result.dataUrl, result.filename);
 
-    setDownloadSuccess(true);
-    setTimeout(() => setDownloadSuccess(false), 2500);
+      try {
+        confetti({
+          particleCount: 50,
+          spread: 60,
+          origin: { y: 0.7 },
+          colors: ['#00F0FF', '#B026FF'],
+        });
+      } catch {}
+
+      setDownloadSuccess(true);
+      setTimeout(() => setDownloadSuccess(false), 2500);
+    } catch {
+      if (canvasRef.current) {
+        const dataUrl = canvasRef.current.toDataURL('image/png');
+        const safeName = state.brandName.replace(/[^a-zA-Z0-9]/g, '_');
+        triggerFileDownload(dataUrl, `GOALSTAR_${safeName}_LOGO_800x800.png`);
+      }
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleSave = () => {
@@ -152,11 +162,23 @@ export const LogoBranding: React.FC<LogoBrandingProps> = ({
           </button>
 
           <button
-            onClick={handleDownload}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-black font-black text-xs shadow-lg shadow-emerald-500/30 hover:brightness-110 active:scale-95 transition-all"
+            onClick={() => handleDownload('4k')}
+            disabled={isExporting}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-black font-black text-xs shadow-lg shadow-emerald-500/30 hover:brightness-110 active:scale-95 transition-all disabled:opacity-60"
+            title="Download 4K Ultra High-Resolution Logo PNG (2400 × 2400)"
           >
-            <Download className="w-3.5 h-3.5 fill-black" />
-            <span>{downloadSuccess ? 'Downloaded!' : 'Export Logo'}</span>
+            {isExporting ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Download className="w-3.5 h-3.5 fill-black" />
+            )}
+            <span>
+              {isExporting
+                ? 'Exporting 4K...'
+                : downloadSuccess
+                ? 'Downloaded!'
+                : 'Export 4K Logo'}
+            </span>
           </button>
         </div>
       </div>

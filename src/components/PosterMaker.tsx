@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { PosterState } from '../types';
-import { renderPosterCanvas, triggerFileDownload } from '../utils/canvasRenderer';
+import { renderPosterCanvas, triggerFileDownload, exportHighResPoster } from '../utils/canvasRenderer';
 import { PRESET_POSTERS } from '../utils/assets';
 import confetti from 'canvas-confetti';
 import { 
@@ -13,7 +13,8 @@ import {
   DollarSign, 
   MapPin, 
   CheckCircle2, 
-  Wand2 
+  Wand2,
+  Sparkles
 } from 'lucide-react';
 
 interface PosterMakerProps {
@@ -31,6 +32,7 @@ export const PosterMaker: React.FC<PosterMakerProps> = ({
   const [isRendering, setIsRendering] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const [state, setState] = useState<PosterState>({
     matchTitle: 'GRAND CHAMPIONS ESPORTS CUP',
@@ -66,23 +68,32 @@ export const PosterMaker: React.FC<PosterMakerProps> = ({
     };
   }, [state, channelName]);
 
-  const handleDownload = () => {
-    if (!canvasRef.current) return;
-    const dataUrl = canvasRef.current.toDataURL('image/png');
-    const safeTitle = state.matchTitle.replace(/[^a-zA-Z0-9]/g, '_');
-    triggerFileDownload(dataUrl, `GOALSTAR_${safeTitle}_POSTER_1080x1350.png`);
-
+  const handleDownload = async (resolution: '1080p' | '4k' = '4k') => {
+    setIsExporting(true);
     try {
-      confetti({
-        particleCount: 50,
-        spread: 60,
-        origin: { y: 0.7 },
-        colors: ['#00F0FF', '#FFE600'],
-      });
-    } catch {}
+      const result = await exportHighResPoster(state, resolution, { channelName });
+      triggerFileDownload(result.dataUrl, result.filename);
 
-    setDownloadSuccess(true);
-    setTimeout(() => setDownloadSuccess(false), 2500);
+      try {
+        confetti({
+          particleCount: 55,
+          spread: 65,
+          origin: { y: 0.7 },
+          colors: ['#00F0FF', '#FFE600'],
+        });
+      } catch {}
+
+      setDownloadSuccess(true);
+      setTimeout(() => setDownloadSuccess(false), 2500);
+    } catch {
+      if (canvasRef.current) {
+        const dataUrl = canvasRef.current.toDataURL('image/png');
+        const safeTitle = state.matchTitle.replace(/[^a-zA-Z0-9]/g, '_');
+        triggerFileDownload(dataUrl, `GOALSTAR_${safeTitle}_POSTER_1080x1350.png`);
+      }
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleSave = () => {
@@ -160,11 +171,23 @@ export const PosterMaker: React.FC<PosterMakerProps> = ({
           </button>
 
           <button
-            onClick={handleDownload}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-black font-black text-xs shadow-lg shadow-amber-500/25 hover:brightness-110 active:scale-95 transition-all"
+            onClick={() => handleDownload('4k')}
+            disabled={isExporting}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-black font-black text-xs shadow-lg shadow-amber-500/25 hover:brightness-110 active:scale-95 transition-all disabled:opacity-60"
+            title="Download 4K Ultra High-Resolution Poster PNG (2160 × 2700)"
           >
-            <Download className="w-3.5 h-3.5 fill-black" />
-            <span>{downloadSuccess ? 'Downloaded!' : 'Export HD'}</span>
+            {isExporting ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Download className="w-3.5 h-3.5 fill-black" />
+            )}
+            <span>
+              {isExporting
+                ? 'Exporting 4K...'
+                : downloadSuccess
+                ? 'Downloaded!'
+                : 'Export 4K Poster'}
+            </span>
           </button>
         </div>
       </div>

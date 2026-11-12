@@ -1,5 +1,5 @@
-import React from 'react';
-import { Settings, Zap, Flame, Crown } from 'lucide-react';
+import React, { useState } from 'react';
+import { Settings, Zap, Flame, Crown, FolderDown, Check } from 'lucide-react';
 
 interface HeaderProps {
   channelName: string;
@@ -12,6 +12,19 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSettings,
   onOpenAIModal,
 }) => {
+  const [isDownloadingZip, setIsDownloadingZip] = useState(false);
+
+  const handleDownloadZip = () => {
+    setIsDownloadingZip(true);
+    const link = document.createElement('a');
+    link.href = '/api/download-project-zip';
+    link.setAttribute('download', 'goalstar-gaming-studio-source.zip');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => setIsDownloadingZip(false), 2500);
+  };
+
   return (
     <header className="px-4 py-3 bg-[#080B1C]/80 backdrop-blur-md border-b border-cyan-500/15 sticky top-0 z-30 flex items-center justify-between">
       {/* Brand logo & tagline */}
@@ -41,6 +54,25 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right Action Cluster */}
       <div className="flex items-center gap-2">
+        {/* Direct Download GSG Source Code ZIP */}
+        <button
+          onClick={handleDownloadZip}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-900/90 border border-slate-700/80 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/50 text-xs font-bold transition-all active:scale-95 shadow-sm"
+          title="Download Complete Website & Studio Files (ZIP)"
+        >
+          {isDownloadingZip ? (
+            <>
+              <Check className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden sm:inline text-emerald-400">Downloading...</span>
+            </>
+          ) : (
+            <>
+              <FolderDown className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="hidden sm:inline">Files ZIP</span>
+            </>
+          )}
+        </button>
+
         {onOpenAIModal && (
           <button
             onClick={onOpenAIModal}

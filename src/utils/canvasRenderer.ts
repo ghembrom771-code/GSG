@@ -12,19 +12,25 @@ export function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-// Draw the 1280x720 YouTube Thumbnail
+// Draw the 1280x720 YouTube Thumbnail (supports scale multiplier: 1x=720p HD, 1.5x=1080p FHD, 3x=4K Ultra)
 export async function renderThumbnailCanvas(
   canvas: HTMLCanvasElement,
   state: ThumbnailState,
-  options?: { channelName?: string }
+  options?: { channelName?: string; scale?: number }
 ): Promise<string> {
   const ctx = canvas.getContext('2d');
   if (!ctx) return '';
 
+  const scale = options?.scale && options.scale > 0 ? options.scale : 1;
   const width = 1280;
   const height = 720;
-  canvas.width = width;
-  canvas.height = height;
+  canvas.width = Math.round(width * scale);
+  canvas.height = Math.round(height * scale);
+
+  ctx.save();
+  if (scale !== 1) {
+    ctx.scale(scale, scale);
+  }
 
   // 1. Draw Background
   if (state.backgroundImage) {
@@ -165,6 +171,7 @@ export async function renderThumbnailCanvas(
   }
   drawCyberCorners(ctx, width, height, state.glowColor || '#00F0FF');
 
+  ctx.restore();
   return canvas.toDataURL('image/png');
 }
 
@@ -474,15 +481,21 @@ function drawCyberCorners(
 export async function renderPosterCanvas(
   canvas: HTMLCanvasElement,
   state: PosterState,
-  options?: { channelName?: string }
+  options?: { channelName?: string; scale?: number }
 ): Promise<string> {
   const ctx = canvas.getContext('2d');
   if (!ctx) return '';
 
+  const scale = options?.scale && options.scale > 0 ? options.scale : 1;
   const width = 1080;
   const height = 1350;
-  canvas.width = width;
-  canvas.height = height;
+  canvas.width = Math.round(width * scale);
+  canvas.height = Math.round(height * scale);
+
+  ctx.save();
+  if (scale !== 1) {
+    ctx.scale(scale, scale);
+  }
 
   // Background
   const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
@@ -601,6 +614,7 @@ export async function renderPosterCanvas(
   ctx.restore();
 
   drawCyberCorners(ctx, width, height, '#00F0FF');
+  ctx.restore();
   return canvas.toDataURL('image/png');
 }
 
@@ -666,15 +680,21 @@ function drawTeamCard(
 export async function renderShortsCanvas(
   canvas: HTMLCanvasElement,
   state: ShortsState,
-  options?: { channelName?: string }
+  options?: { channelName?: string; scale?: number }
 ): Promise<string> {
   const ctx = canvas.getContext('2d');
   if (!ctx) return '';
 
+  const scale = options?.scale && options.scale > 0 ? options.scale : 1;
   const width = 1080;
   const height = 1920;
-  canvas.width = width;
-  canvas.height = height;
+  canvas.width = Math.round(width * scale);
+  canvas.height = Math.round(height * scale);
+
+  ctx.save();
+  if (scale !== 1) {
+    ctx.scale(scale, scale);
+  }
 
   // Background
   const grad = ctx.createLinearGradient(0, 0, 0, height);
@@ -801,6 +821,7 @@ export async function renderShortsCanvas(
   ctx.restore();
 
   drawCyberCorners(ctx, width, height, state.accentColor || '#00F0FF');
+  ctx.restore();
   return canvas.toDataURL('image/png');
 }
 
@@ -809,14 +830,21 @@ export async function renderShortsCanvas(
 // -------------------------------------------------------------
 export async function renderLogoCanvas(
   canvas: HTMLCanvasElement,
-  state: LogoState
+  state: LogoState,
+  options?: { scale?: number }
 ): Promise<string> {
   const ctx = canvas.getContext('2d');
   if (!ctx) return '';
 
+  const scale = options?.scale && options.scale > 0 ? options.scale : 1;
   const size = 800;
-  canvas.width = size;
-  canvas.height = size;
+  canvas.width = Math.round(size * scale);
+  canvas.height = Math.round(size * scale);
+
+  ctx.save();
+  if (scale !== 1) {
+    ctx.scale(scale, scale);
+  }
 
   // Background
   const grad = ctx.createRadialGradient(size / 2, size / 2, 50, size / 2, size / 2, size * 0.7);
@@ -861,7 +889,6 @@ export async function renderLogoCanvas(
 
   // Mascot Center Graphics
   if (state.mascot === 'shield_controller') {
-    // Gamepad controller emblem
     ctx.font = "120px sans-serif";
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -877,13 +904,11 @@ export async function renderLogoCanvas(
     ctx.textBaseline = 'middle';
     ctx.fillText('👑', 0, 0);
   } else {
-    // star_ball: Football surrounded by neon star
     ctx.font = "120px sans-serif";
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('⚽', 0, -10);
 
-    // Glowing Star behind
     ctx.font = "900 80px 'Orbitron', sans-serif";
     ctx.fillStyle = state.primaryColor || '#00F0FF';
     ctx.fillText('★', 0, 85);
@@ -928,6 +953,7 @@ export async function renderLogoCanvas(
     ctx.restore();
   }
 
+  ctx.restore();
   return canvas.toDataURL('image/png');
 }
 
@@ -939,4 +965,86 @@ export function triggerFileDownload(dataUrl: string, fileName: string) {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+}
+
+// -------------------------------------------------------------
+// HIGH-RESOLUTION LOCAL DEVICE EXPORT HELPERS
+// -------------------------------------------------------------
+
+export async function exportHighResThumbnail(
+  state: ThumbnailState,
+  resolution: '720p' | '1080p' | '4k',
+  options?: { channelName?: string }
+): Promise<{ dataUrl: string; width: number; height: number; filename: string }> {
+  const offscreen = document.createElement('canvas');
+  let scale = 1;
+  let resLabel = '1280x720_HD';
+  if (resolution === '1080p') {
+    scale = 1.5;
+    resLabel = '1920x1080_FHD';
+  } else if (resolution === '4k') {
+    scale = 3;
+    resLabel = '3840x2160_4K_ULTRA';
+  }
+  const dataUrl = await renderThumbnailCanvas(offscreen, state, { channelName: options?.channelName, scale });
+  const safeTitle = (state.mainTitle || 'THUMBNAIL').replace(/[^a-zA-Z0-9]/g, '_');
+  return {
+    dataUrl,
+    width: Math.round(1280 * scale),
+    height: Math.round(720 * scale),
+    filename: `GOALSTAR_${safeTitle}_${resLabel}.png`,
+  };
+}
+
+export async function exportHighResPoster(
+  state: PosterState,
+  resolution: '1080p' | '4k',
+  options?: { channelName?: string }
+): Promise<{ dataUrl: string; width: number; height: number; filename: string }> {
+  const offscreen = document.createElement('canvas');
+  const scale = resolution === '4k' ? 2 : 1;
+  const resLabel = resolution === '4k' ? '2160x2700_4K_ULTRA' : '1080x1350_HD';
+  const dataUrl = await renderPosterCanvas(offscreen, state, { channelName: options?.channelName, scale });
+  const safeTitle = (state.matchTitle || 'POSTER').replace(/[^a-zA-Z0-9]/g, '_');
+  return {
+    dataUrl,
+    width: Math.round(1080 * scale),
+    height: Math.round(1350 * scale),
+    filename: `GOALSTAR_${safeTitle}_${resLabel}.png`,
+  };
+}
+
+export async function exportHighResShorts(
+  state: ShortsState,
+  resolution: '1080p' | '4k',
+  options?: { channelName?: string }
+): Promise<{ dataUrl: string; width: number; height: number; filename: string }> {
+  const offscreen = document.createElement('canvas');
+  const scale = resolution === '4k' ? 2 : 1;
+  const resLabel = resolution === '4k' ? '2160x3840_4K_ULTRA' : '1080x1920_HD';
+  const dataUrl = await renderShortsCanvas(offscreen, state, { channelName: options?.channelName, scale });
+  const safeTitle = (state.headline || 'SHORTS').replace(/[^a-zA-Z0-9]/g, '_');
+  return {
+    dataUrl,
+    width: Math.round(1080 * scale),
+    height: Math.round(1920 * scale),
+    filename: `GOALSTAR_${safeTitle}_${resLabel}.png`,
+  };
+}
+
+export async function exportHighResLogo(
+  state: LogoState,
+  resolution: '800p' | '4k'
+): Promise<{ dataUrl: string; width: number; height: number; filename: string }> {
+  const offscreen = document.createElement('canvas');
+  const scale = resolution === '4k' ? 3 : 1;
+  const resLabel = resolution === '4k' ? '2400x2400_4K_ULTRA' : '800x800_HD';
+  const dataUrl = await renderLogoCanvas(offscreen, state, { scale });
+  const safeTitle = (state.brandName || 'LOGO').replace(/[^a-zA-Z0-9]/g, '_');
+  return {
+    dataUrl,
+    width: Math.round(800 * scale),
+    height: Math.round(800 * scale),
+    filename: `GOALSTAR_${safeTitle}_${resLabel}.png`,
+  };
 }

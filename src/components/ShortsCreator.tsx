@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ShortsState } from '../types';
-import { renderShortsCanvas, triggerFileDownload } from '../utils/canvasRenderer';
+import { renderShortsCanvas, triggerFileDownload, exportHighResShorts } from '../utils/canvasRenderer';
 import { PRESET_SHORTS } from '../utils/assets';
 import confetti from 'canvas-confetti';
 import { 
@@ -12,7 +12,8 @@ import {
   CheckCircle2, 
   Flame, 
   Layers, 
-  BellRing 
+  BellRing,
+  Sparkles 
 } from 'lucide-react';
 
 interface ShortsCreatorProps {
@@ -30,6 +31,7 @@ export const ShortsCreator: React.FC<ShortsCreatorProps> = ({
   const [isRendering, setIsRendering] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const [state, setState] = useState<ShortsState>({
     headline: 'RONALDO BROKE THE ENGINE! 😱',
@@ -62,23 +64,32 @@ export const ShortsCreator: React.FC<ShortsCreatorProps> = ({
     };
   }, [state, channelName]);
 
-  const handleDownload = () => {
-    if (!canvasRef.current) return;
-    const dataUrl = canvasRef.current.toDataURL('image/png');
-    const safeTitle = state.headline.replace(/[^a-zA-Z0-9]/g, '_');
-    triggerFileDownload(dataUrl, `GOALSTAR_${safeTitle}_SHORTS_9x16.png`);
-
+  const handleDownload = async (resolution: '1080p' | '4k' = '4k') => {
+    setIsExporting(true);
     try {
-      confetti({
-        particleCount: 50,
-        spread: 60,
-        origin: { y: 0.7 },
-        colors: ['#FF007A', '#00F0FF'],
-      });
-    } catch {}
+      const result = await exportHighResShorts(state, resolution, { channelName });
+      triggerFileDownload(result.dataUrl, result.filename);
 
-    setDownloadSuccess(true);
-    setTimeout(() => setDownloadSuccess(false), 2500);
+      try {
+        confetti({
+          particleCount: 50,
+          spread: 60,
+          origin: { y: 0.7 },
+          colors: ['#FF007A', '#00F0FF'],
+        });
+      } catch {}
+
+      setDownloadSuccess(true);
+      setTimeout(() => setDownloadSuccess(false), 2500);
+    } catch {
+      if (canvasRef.current) {
+        const dataUrl = canvasRef.current.toDataURL('image/png');
+        const safeTitle = state.headline.replace(/[^a-zA-Z0-9]/g, '_');
+        triggerFileDownload(dataUrl, `GOALSTAR_${safeTitle}_SHORTS_9x16.png`);
+      }
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleSave = () => {
@@ -155,11 +166,23 @@ export const ShortsCreator: React.FC<ShortsCreatorProps> = ({
           </button>
 
           <button
-            onClick={handleDownload}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white font-black text-xs shadow-lg shadow-rose-500/30 hover:brightness-110 active:scale-95 transition-all"
+            onClick={() => handleDownload('4k')}
+            disabled={isExporting}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white font-black text-xs shadow-lg shadow-rose-500/30 hover:brightness-110 active:scale-95 transition-all disabled:opacity-60"
+            title="Download High-Res 9:16 Shorts PNG (2160 × 3840)"
           >
-            <Download className="w-3.5 h-3.5" />
-            <span>{downloadSuccess ? 'Downloaded!' : 'Export 9:16'}</span>
+            {isExporting ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Download className="w-3.5 h-3.5" />
+            )}
+            <span>
+              {isExporting
+                ? 'Exporting...'
+                : downloadSuccess
+                ? 'Downloaded!'
+                : 'Export 4K Shorts'}
+            </span>
           </button>
         </div>
       </div>

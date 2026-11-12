@@ -1,6 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ThumbnailState } from '../types';
-import { renderThumbnailCanvas, triggerFileDownload } from '../utils/canvasRenderer';
+import { 
+  renderThumbnailCanvas, 
+  triggerFileDownload, 
+  exportHighResThumbnail 
+} from '../utils/canvasRenderer';
 import { PRESET_THUMBNAILS } from '../utils/assets';
 import confetti from 'canvas-confetti';
 import { 
@@ -15,7 +19,9 @@ import {
   Image as ImageIcon,
   Flame,
   CheckCircle2,
-  Wand2
+  Wand2,
+  ChevronDown,
+  Monitor
 } from 'lucide-react';
 
 interface ThumbnailMakerProps {
@@ -36,6 +42,9 @@ export const ThumbnailMaker: React.FC<ThumbnailMakerProps> = ({
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState<'text' | 'players' | 'theme' | 'badges'>('text');
+  const [selectedRes, setSelectedRes] = useState<'720p' | '1080p' | '4k'>('1080p');
+  const [isExporting, setIsExporting] = useState(false);
+  const [showResDropdown, setShowResDropdown] = useState(false);
 
   const [state, setState] = useState<ThumbnailState>({
     mainTitle: initialState?.mainTitle || 'RONALDO VS MBAPPE',
@@ -100,24 +109,35 @@ export const ThumbnailMaker: React.FC<ThumbnailMakerProps> = ({
     reader.readAsDataURL(file);
   };
 
-  // 1-Click Export 1280x720 PNG
-  const handleDownload = () => {
-    if (!canvasRef.current) return;
-    const dataUrl = canvasRef.current.toDataURL('image/png');
-    const safeTitle = (state.mainTitle || 'GOALSTAR_THUMBNAIL').replace(/[^a-zA-Z0-9]/g, '_');
-    triggerFileDownload(dataUrl, `GOALSTAR_${safeTitle}_1280x720.png`);
-
+  // High-Resolution PNG Download to local device
+  const handleDownload = async (res: '720p' | '1080p' | '4k' = selectedRes) => {
+    setIsExporting(true);
+    setShowResDropdown(false);
     try {
-      confetti({
-        particleCount: 60,
-        spread: 70,
-        origin: { y: 0.7 },
-        colors: ['#00F0FF', '#B026FF', '#FFE600'],
-      });
-    } catch {}
+      const result = await exportHighResThumbnail(state, res, { channelName });
+      triggerFileDownload(result.dataUrl, result.filename);
 
-    setDownloadSuccess(true);
-    setTimeout(() => setDownloadSuccess(false), 2500);
+      try {
+        confetti({
+          particleCount: 65,
+          spread: 75,
+          origin: { y: 0.7 },
+          colors: ['#00F0FF', '#B026FF', '#FFE600'],
+        });
+      } catch {}
+
+      setDownloadSuccess(true);
+      setTimeout(() => setDownloadSuccess(false), 2500);
+    } catch (err) {
+      console.error('High-res export failed, falling back to direct canvas', err);
+      if (canvasRef.current) {
+        const dataUrl = canvasRef.current.toDataURL('image/png');
+        const safeTitle = (state.mainTitle || 'GOALSTAR_THUMBNAIL').replace(/[^a-zA-Z0-9]/g, '_');
+        triggerFileDownload(dataUrl, `GOALSTAR_${safeTitle}_1280x720.png`);
+      }
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   // Save to My Projects
@@ -202,13 +222,107 @@ export const ThumbnailMaker: React.FC<ThumbnailMakerProps> = ({
             <span>{saveSuccess ? 'Saved!' : 'Save'}</span>
           </button>
 
-          <button
-            onClick={handleDownload}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-black font-black text-xs shadow-lg shadow-cyan-500/30 hover:brightness-110 active:scale-95 transition-all"
-          >
-            <Download className="w-3.5 h-3.5 fill-black" />
-            <span>{downloadSuccess ? 'Downloaded!' : 'Export HD'}</span>
-          </button>
+          {/* High-Resolution PNG Download Button with Resolution Picker */}
+          <div className="relative flex items-center">
+            <button
+              onClick={() => handleDownload(selectedRes)}
+              disabled={isExporting}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-l-xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-black font-black text-xs shadow-lg shadow-cyan-500/30 hover:brightness-110 active:scale-95 transition-all disabled:opacity-60"
+              title={`Download as ${selectedRes.toUpperCase()} PNG`}
+            >
+              {isExporting ? (
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Download className="w-3.5 h-3.5 fill-black" />
+              )}
+              <span>
+                {isExporting
+                  ? 'Exporting...'
+                  : downloadSuccess
+                  ? 'Saved!'
+                  : selectedRes === '4k'
+                  ? 'Export 4K'
+                  : selectedRes === '1080p'
+                  ? 'Export 1080p'
+                  : 'Export 720p'}
+              </span>
+            </button>
+
+            {/* Resolution dropdown trigger */}
+            <button
+              onClick={() => setShowResDropdown((p) => !p)}
+              className="px-1.5 py-1.5 rounded-r-xl bg-indigo-600 text-black border-l border-black/20 hover:bg-indigo-500 transition-colors"
+              title="Select Resolution (720p / 1080p / 4K)"
+            >
+              <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Resolution Menu Popup */}
+            {showResDropdown && (
+              <div className="absolute top-full right-0 mt-1.5 w-48 bg-[#0c112b] border border-cyan-500/40 rounded-2xl p-1.5 shadow-2xl z-30 space-y-1">
+                <span className="text-[10px] font-mono text-cyan-400 font-bold px-2 py-1 block">
+                  SELECT EXPORT RESOLUTION:
+                </span>
+
+                <button
+                  onClick={() => {
+                    setSelectedRes('720p');
+                    handleDownload('720p');
+                  }}
+                  className={`w-full text-left px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
+                    selectedRes === '720p'
+                      ? 'bg-cyan-950/80 text-cyan-300 border border-cyan-500/30'
+                      : 'text-slate-300 hover:bg-slate-900'
+                  }`}
+                >
+                  <div>
+                    <span className="block">720p HD</span>
+                    <span className="text-[10px] font-mono text-slate-400">1280 × 720 px</span>
+                  </div>
+                  {selectedRes === '720p' && <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" />}
+                </button>
+
+                <button
+                  onClick={() => {
+                    setSelectedRes('1080p');
+                    handleDownload('1080p');
+                  }}
+                  className={`w-full text-left px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
+                    selectedRes === '1080p'
+                      ? 'bg-cyan-950/80 text-cyan-300 border border-cyan-500/30'
+                      : 'text-slate-300 hover:bg-slate-900'
+                  }`}
+                >
+                  <div>
+                    <span className="block">1080p Full HD</span>
+                    <span className="text-[10px] font-mono text-slate-400">1920 × 1080 px</span>
+                  </div>
+                  {selectedRes === '1080p' && <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" />}
+                </button>
+
+                <button
+                  onClick={() => {
+                    setSelectedRes('4k');
+                    handleDownload('4k');
+                  }}
+                  className={`w-full text-left px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
+                    selectedRes === '4k'
+                      ? 'bg-cyan-950/80 text-cyan-300 border border-cyan-500/30'
+                      : 'text-slate-300 hover:bg-slate-900'
+                  }`}
+                >
+                  <div>
+                    <span className="block text-amber-400 font-extrabold flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-amber-400" />
+                      4K Ultra UHD
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-400">3840 × 2160 px</span>
+                  </div>
+                  {selectedRes === '4k' && <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" />}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

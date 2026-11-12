@@ -2,7 +2,9 @@ import express, { Request, Response } from 'express';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 import dotenv from 'dotenv';
+import JSZip from 'jszip';
 import { GoogleGenAI } from '@google/genai';
 
 dotenv.config();
@@ -39,6 +41,89 @@ app.get('/api/health', (_req: Request, res: Response) => {
     engine: 'Gemini 3.8 Flash & Gemini Image Gen',
     timestamp: new Date().toISOString(),
   });
+});
+
+// Download Complete Project Source Code as a ZIP
+app.get('/api/download-project-zip', async (_req: Request, res: Response) => {
+  try {
+    const zip = new JSZip();
+    const rootDir = __dirname;
+
+    function addDirectoryToZip(currentDir: string, zipFolder: JSZip) {
+      const items = fs.readdirSync(currentDir, { withFileTypes: true });
+      for (const item of items) {
+        // Skip ignored directories
+        if (
+          item.name === 'node_modules' ||
+          item.name === 'dist' ||
+          item.name === '.git' ||
+          item.name === '.cache' ||
+          item.name === '.aistudio'
+        ) {
+          continue;
+        }
+
+        const fullPath = path.join(currentDir, item.name);
+        if (item.isDirectory()) {
+          const subFolder = zipFolder.folder(item.name);
+          if (subFolder) {
+            addDirectoryToZip(fullPath, subFolder);
+          }
+        } else {
+          // Read file content
+          const content = fs.readFileSync(fullPath);
+          zipFolder.file(item.name, content);
+        }
+      }
+    }
+
+    addDirectoryToZip(rootDir, zip);
+
+    // Provide helpful README.md for local setup
+    const readmeContent = `# GOALSTAR GAMING STUDIO
+Professional YouTube Gaming Creator Studio for football gaming thumbnails, viral titles, match posters, shorts templates, and channel branding.
+
+## 🚀 Quick Local Setup
+
+1. Install dependencies:
+\`\`\`bash
+npm install
+\`\`\`
+
+2. (Optional) Set your Gemini API Key in .env:
+\`\`\`bash
+GEMINI_API_KEY="your_gemini_api_key"
+\`\`\`
+
+3. Start dev server:
+\`\`\`bash
+npm run dev
+\`\`\`
+
+4. Open in browser:
+\`http://localhost:3000\`
+
+Built with React 19, TypeScript, Tailwind CSS, Express, and Google Gemini API.
+`;
+    zip.file('README.md', readmeContent);
+
+    const zipBuffer = await zip.generateAsync({
+      type: 'nodebuffer',
+      compression: 'DEFLATE',
+      compressionOptions: { level: 6 },
+    });
+
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="goalstar-gaming-studio-source.zip"'
+    );
+    res.setHeader('Content-Length', zipBuffer.length);
+    res.send(zipBuffer);
+  } catch (err: any) {
+    console.error('Error creating project zip:', err);
+    res.status(500).json({ error: 'Failed to create project ZIP: ' + err.message });
+  }
 });
 
 // Title Generator API

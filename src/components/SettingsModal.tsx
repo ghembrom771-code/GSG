@@ -197,6 +197,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <span>Reset Sample Projects</span>
             </button>
           </div>
+
+          {/* Export Complete Studio Website / Source Code ZIP */}
+          <div className="space-y-2 pt-3 border-t border-slate-800">
+            <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider block">
+              5. Download Website & Project Files
+            </span>
+
+            <div className="p-3 rounded-2xl bg-gradient-to-br from-emerald-950/40 to-slate-900 border border-emerald-500/30 space-y-2.5">
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                Download the complete <strong>GOALSTAR GAMING STUDIO</strong> codebase (React 19, TypeScript, Tailwind CSS, Express backend & assets) as a clean <code>.zip</code> file for hosting on cPanel, VPS, or running locally.
+              </p>
+
+              <a
+                href="/api/download-project-zip"
+                download="goalstar-gaming-studio-source.zip"
+                className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-black font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 hover:brightness-110 active:scale-98 transition-all"
+              >
+                <span>📦 Download Studio Source ZIP</span>
+              </a>
+            </div>
+          </div>
         </div>
 
         {/* Footer */}

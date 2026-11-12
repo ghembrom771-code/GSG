@@ -88,7 +88,7 @@ export const MyProjects: React.FC<MyProjectsProps> = ({
   return (
     <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 space-y-4 pb-24">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <div className="flex items-center gap-2">
             <span className="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-400">
@@ -105,6 +105,16 @@ export const MyProjects: React.FC<MyProjectsProps> = ({
             Re-open previous designs in editor, preview full-resolution images, or download directly to your phone.
           </p>
         </div>
+
+        <a
+          href="/api/download-project-zip"
+          download="goalstar-gaming-studio-source.zip"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-emerald-500/40 text-emerald-300 hover:text-white hover:bg-emerald-950/60 text-xs font-bold transition-all self-start sm:self-auto shadow-sm"
+          title="Download Complete Studio Website Source Code (ZIP)"
+        >
+          <Download className="w-3.5 h-3.5 text-emerald-400" />
+          <span>Download App ZIP</span>
+        </a>
       </div>
 
       {/* Filter Tabs */}
